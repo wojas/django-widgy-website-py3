@@ -1,0 +1,2 @@
+django-extensions==1.3.6
+django-pgrunner==0.2.1
