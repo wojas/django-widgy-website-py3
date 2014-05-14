@@ -2,3 +2,16 @@ Django==1.6.4
 South==0.8.4
 psycopg2==2.5.2
 six==1.6.1
+
+# Fixing up Widgy dependencies for python 3
+# FIXME: current stable does not support py3, use latest for now, but pick stable when released
+-e git+https://github.com/django-compressor/django-compressor@develop#egg=django-compressor
+-e git+https://github.com/mariocesar/sorl-thumbnail#egg=sorl-thumbnail
+-e git+https://github.com/stefanfoulis/django-filer@develop#egg=django-filer
+django-mptt>=0.6.0
+
+# Packages I had to fix for py3. Revert to official when the fixes are merged
+-e git+https://github.com/wojas/pyScss#egg=pyScss
+-e git+https://github.com/wojas/django-pyscss#egg=django-pyscss
+-e git+https://github.com/wojas/django-argonauts#egg=django-argonauts
+-e git+https://github.com/wojas/django-widgy#egg=django-widgy

@@ -4,3 +4,5 @@ pgrunnerdb
 *.db
 tmp/*
 secret_key
+htdocs/media
+htdocs/static

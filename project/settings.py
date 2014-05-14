@@ -23,7 +23,7 @@ PROFILING = DEBUG
 
 # If you want to change it in local_settings, it is not enough to just override
 # this one: you also have to copy all the variables that use it.
-HTDOCS_ROOT = os.path.join(PROJECT_ROOT, '..', '..', 'htdocs')
+HTDOCS_ROOT = os.path.abspath(os.path.join(PROJECT_ROOT, '..', 'htdocs'))
 
 # Files uploaded by users
 MEDIA_ROOT = os.path.join(HTDOCS_ROOT, 'media')
@@ -33,6 +33,9 @@ MEDIA_URL = '/media/'
 STATIC_ROOT = os.path.join(HTDOCS_ROOT, 'static')
 STATIC_URL = '/static/'
 
+# Use pgrunner to develop against PostgreSQL instead of sqlite?
+PGRUNNER = False
+# WARNING: DATABASES will be overwritten by pgrunner below, if PGRUNNER = True
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -44,14 +47,9 @@ DATABASES = {
 
     }
 }
-
-#try:
-#    from postgresdevdb.settings import *
-#except ImportError:
-#    # Assume this is a production machine
-#    pass
-import pgrunner
-pgrunner.settings(locals())
+if PGRUNNER:
+    import pgrunner
+    pgrunner.settings(locals())
 
 # Hosts/domain names that are valid for this site; required if DEBUG is False
 # See https://docs.djangoproject.com/en/1.5/ref/settings/#allowed-hosts
@@ -80,25 +78,6 @@ USE_L10N = True
 # If you set this to False, Django will not use timezone-aware datetimes.
 USE_TZ = True
 
-# Absolute filesystem path to the directory that will hold user-uploaded files.
-# Example: "/var/www/example.com/media/"
-MEDIA_ROOT = ''
-
-# URL that handles the media served from MEDIA_ROOT. Make sure to use a
-# trailing slash.
-# Examples: "http://example.com/media/", "http://media.example.com/"
-MEDIA_URL = ''
-
-# Absolute path to the directory static files should be collected to.
-# Don't put anything in this directory yourself; store your static files
-# in apps' "static/" subdirectories and in STATICFILES_DIRS.
-# Example: "/var/www/example.com/static/"
-STATIC_ROOT = ''
-
-# URL prefix for static files.
-# Example: "http://example.com/static/", "http://static.example.com/"
-STATIC_URL = '/static/'
-
 # Additional locations of static files
 STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
@@ -109,11 +88,16 @@ STATICFILES_DIRS = (
 # List of finder classes that know how to find static files in
 # various locations.
 STATICFILES_FINDERS = (
+    'compressor.finders.CompressorFinder',
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
 #    'django.contrib.staticfiles.finders.DefaultStorageFinder',
 )
 
+COMPRESS_ENABLED = True
+COMPRESS_PRECOMPILERS = (
+    ('text/x-scss', 'django_pyscss.compressor.DjangoScssFilter'),
+)
 
 def get_secret_key(path):
     """Get the SECRET_KEY from a file, and creates it if needed"""
@@ -152,6 +136,21 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.messages.middleware.MessageMiddleware',
     # Uncomment the next line for simple clickjacking protection:
     # 'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'mezzanine.core.request.CurrentRequestMiddleware',
+    'mezzanine.core.middleware.AdminLoginInterfaceSelectorMiddleware',
+    'mezzanine.pages.middleware.PageMiddleware',
+)
+
+TEMPLATE_CONTEXT_PROCESSORS = (
+    "django.contrib.auth.context_processors.auth",
+    "django.contrib.messages.context_processors.messages",
+    "django.core.context_processors.debug",
+    "django.core.context_processors.i18n",
+    "django.core.context_processors.static",
+    "django.core.context_processors.media",
+    "django.core.context_processors.request",
+    "mezzanine.conf.context_processors.settings",
+    "mezzanine.pages.context_processors.page"
 )
 
 ROOT_URLCONF = 'project.urls'
@@ -165,22 +164,76 @@ TEMPLATE_DIRS = (
     # Don't forget to use absolute paths, not relative paths.
 )
 
-INSTALLED_APPS = (
+INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.comments',
+
+    'mezzanine.boot',
+    'mezzanine.conf',
+    'mezzanine.core',
+    'mezzanine.generic',
+    'mezzanine.pages',
+    'filebrowser_safe',
+    'grappelli_safe',
+
+    'widgy',
+    'widgy.contrib.page_builder',
+    'widgy.contrib.form_builder',
+    'widgy.contrib.widgy_mezzanine',
+
+    # Must come after mezzanine, grappelli and widgy
     'django.contrib.admin',
     'django.contrib.admindocs',
+
+    'filer',
+    'easy_thumbnails',
+    'compressor',
+    'argonauts',
+    'scss',
+    'sorl.thumbnail',
 
     'south',
 
     # dev
-    'pgrunner',
     'django_extensions',
+]
+if PGRUNNER:
+    INSTALLED_APPS.append('pgrunner')
+
+# Settings for widgy
+# See http://docs.wid.gy/en/latest/tutorials/widgy-mezzanine-tutorial.html
+PACKAGE_NAME_FILEBROWSER = "filebrowser_safe"
+PACKAGE_NAME_GRAPPELLI = "grappelli_safe"
+ADMIN_MEDIA_PREFIX = STATIC_URL + "grappelli/"
+TESTING = False
+GRAPPELLI_INSTALLED = True
+# If you want mezzanine to use WidgyPage as the default page, you can add the
+# following line to your settings file:
+ADD_PAGE_ORDER = (
+    'widgy_mezzanine.WidgyPage',
 )
+#WIDGY_MEZZANINE_PAGE_MODEL =
+WIDGY_MEZZANINE_SITE = 'project.widgy_site.site'
+
+ADMIN_MENU_ORDER = [
+    ('Widgy', (
+        'pages.Page',
+        'page_builder.Callout',
+        'form_builder.Form',
+        ('Review queue', 'review_queue.ReviewedVersionCommit'),
+    )),
+]
+
+# Hack needed for easy_thumbnails
+SOUTH_MIGRATION_MODULES = {
+    'easy_thumbnails': 'easy_thumbnails.south_migrations',
+}
+
 
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
